@@ -287,8 +287,8 @@ defmodule CitraClient do
     case resp.status do
       200 -> {:ok,
         %CitraClient.Entities.ImageUploadParams{
-          aws_access_key_id: resp.body["fields"]["awsAccessKeyId"],
-          content_type: resp.body["fields"]["contentType"],
+          aws_access_key_id: resp.body["fields"]["AWSAccessKeyId"],
+          content_type: resp.body["fields"]["Content-Type"],
           key: resp.body["fields"]["key"],
           policy: resp.body["fields"]["policy"],
           signature: resp.body["fields"]["signature"],
