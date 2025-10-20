@@ -196,7 +196,62 @@ defmodule CitraClient do
       201 -> {:ok, resp.body["id"]}
       _ -> {:error, resp.body}
     end
+  end
 
+  @spec get_tasks(integer()) :: [CitraClient.Entities.Task.t()]
+  def get_tasks(telescope_id, opts \\ []) do
+    task_start_after = Keyword.get(opts, :task_start_after, nil)
+    |> case do
+      nil -> nil
+      dt -> DateTime.to_iso8601(dt)
+    end
+    task_start_before = Keyword.get(opts, :task_start_before, nil)
+    |> case do
+      nil -> nil
+      dt -> DateTime.to_iso8601(dt)
+    end
+    task_stop_after = Keyword.get(opts, :task_stop_after, nil)
+    |> case do
+      nil -> nil
+      dt -> DateTime.to_iso8601(dt)
+    end
+    task_stop_before = Keyword.get(opts, :task_stop_before, nil)
+    |> case do
+      nil -> nil
+      dt -> DateTime.to_iso8601(dt)
+    end
+
+    params = %{
+      "taskStartAfter" => task_start_after,
+      "taskStartBefore" => task_start_before,
+      "taskStopAfter" => task_stop_after,
+      "taskStopBefore" => task_stop_before
+    }
+    |> Enum.filter(fn {_k, v} -> v != nil end)
+    |> Enum.into(%{})
+
+    resp = Req.get!(
+      @base_url <> "telescopes/#{telescope_id}/tasks",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+      params: params
+    )
+
+    case resp.status do
+      200 ->
+        Enum.map(resp.body, fn data ->
+          {:ok, task_start, _} = DateTime.from_iso8601(data["taskStart"])
+          {:ok, task_end, _} = DateTime.from_iso8601(data["taskStop"])
+
+          %CitraClient.Entities.Task{
+            task_start: task_start,
+            task_end: task_end,
+            satellite_id: data["satelliteId"],
+            telescope_id: data["telescopeId"],
+            status: String.to_existing_atom(String.downcase(data["status"]))
+          }
+        end)
+      _ -> []
+    end
   end
 
   @spec update_task(String.t(), CitraClient.Entities.TaskStatus.t()) :: :ok | {:error, any()}

@@ -3,14 +3,16 @@ defmodule CitraClient.Entities.Task do
     :task_start,
     :task_end,
     :satellite_id,
-    :telescope_id
+    :telescope_id,
+    :status
   ]
 
   @type t :: %__MODULE__{
           task_start: DateTime.t(),
           task_end: DateTime.t(),
           satellite_id: integer(),
-          telescope_id: integer()
+          telescope_id: integer(),
+          status: CitraClient.Entities.TaskStatus.t()
         }
 end
 
