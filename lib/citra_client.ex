@@ -271,4 +271,34 @@ defmodule CitraClient do
       _ -> {:error, resp.body}
     end
   end
+
+  @spec get_image_upload_params(String.t(), String.t()) :: {:ok, CitraClient.Entities.ImageUploadParams.t()} | {:error, any()}
+  def get_image_upload_params(telescope_id, image_filename) do
+    request_params = %{
+      "telescope_id" => telescope_id,
+      "filename" => image_filename
+    }
+
+    resp = Req.post!(
+      @base_url <> "my/images?" <> URI.encode_query(request_params),
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    )
+
+    case resp.status do
+      200 -> {:ok,
+        %CitraClient.Entities.ImageUploadParams{
+          aws_access_key_id: resp.body["fields"]["awsAccessKeyId"],
+          content_type: resp.body["fields"]["contentType"],
+          key: resp.body["fields"]["key"],
+          policy: resp.body["fields"]["policy"],
+          signature: resp.body["fields"]["signature"],
+          filename: resp.body["filename"],
+          results_url: resp.body["resultsUrl"],
+          upload_url: resp.body["uploadUrl"],
+          upload_id: resp.body["uploadId"]
+        }
+      }
+      _ -> {:error, resp.body}
+    end
+  end
 end
