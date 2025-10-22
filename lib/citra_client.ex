@@ -38,6 +38,23 @@ defmodule CitraClient do
   end
 
   @doc """
+  Get a specific groundstation by ID
+  """
+  @spec get_groundstation(String.t()) :: {:ok, Groundstation.t()} | {:error, any()}
+  def get_groundstation(id) do
+    resp =
+      Req.get!(
+        @base_url <> "ground-stations/#{id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> {:ok, map_groundstation(resp.body)}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
   Creates a new groundstation on the platform - returns the UUID of the created groundstation
   """
   @spec create_groundstation(any()) :: {:error, any()} | {:ok, String.t()}
