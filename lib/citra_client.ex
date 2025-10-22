@@ -359,6 +359,11 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Uploads an image to S3 using presigned upload parameters obtained from the Citra API
+  """
+  @spec upload_image_to_s3(String.t(), String.t()) ::
+          :ok | {:error, %{body: any(), status: integer(), url: String.t()}}
   def upload_image_to_s3(telescope_id, file_path) do
     # get image filename from file path
     filename = Path.basename(file_path)
