@@ -79,6 +79,27 @@ defmodule CitraClient do
     end
   end
 
+  def update_groundstation(groundstation) do
+    body = %{
+      "latitude" => groundstation.latitude,
+      "longitude" => groundstation.longitude,
+      "altitude" => groundstation.altitude,
+      "name" => groundstation.name
+    }
+
+    resp =
+      Req.put!(
+        @base_url <> "ground-stations/#{groundstation.id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
+
+    case resp.status do
+      200 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
   defp map_groundstation(data) do
     {:ok, created_at, _} = DateTime.from_iso8601(data["creationEpoch"])
 
