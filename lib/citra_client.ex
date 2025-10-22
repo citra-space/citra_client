@@ -287,6 +287,7 @@ defmodule CitraClient do
           {:ok, task_end, _} = DateTime.from_iso8601(data["taskStop"])
 
           %CitraClient.Entities.Task{
+            id: data["id"],
             task_start: task_start,
             task_end: task_end,
             satellite_id: data["satelliteId"],

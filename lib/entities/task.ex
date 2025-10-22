@@ -1,5 +1,6 @@
 defmodule CitraClient.Entities.Task do
   defstruct [
+    :id,
     :task_start,
     :task_end,
     :satellite_id,
@@ -8,6 +9,7 @@ defmodule CitraClient.Entities.Task do
   ]
 
   @type t :: %__MODULE__{
+          id: String.t(),
           task_start: DateTime.t(),
           task_end: DateTime.t(),
           satellite_id: integer(),
