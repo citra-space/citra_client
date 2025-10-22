@@ -48,11 +48,12 @@ defmodule CitraClient do
       "name" => groundstation.name
     }
 
-    resp = Req.post!(
-      @base_url <> "ground-stations",
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
-      json: body
-    )
+    resp =
+      Req.post!(
+        @base_url <> "ground-stations",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
 
     case resp.status do
       201 -> {:ok, resp.body["id"]}
@@ -64,12 +65,13 @@ defmodule CitraClient do
     {:ok, created_at, _} = DateTime.from_iso8601(data["creationEpoch"])
 
     # updated_at can be nil
-    updated_at = if data["updateEpoch"] do
-      {:ok, dt, _} = DateTime.from_iso8601(data["updateEpoch"])
-      dt
-    else
-      nil
-    end
+    updated_at =
+      if data["updateEpoch"] do
+        {:ok, dt, _} = DateTime.from_iso8601(data["updateEpoch"])
+        dt
+      else
+        nil
+      end
 
     %Groundstation{
       latitude: data["latitude"],
@@ -111,12 +113,13 @@ defmodule CitraClient do
     {:ok, created_at, _} = DateTime.from_iso8601(data["creationEpoch"])
 
     # last_connection_epoch can be nil
-    last_connection_at = if data["lastConnectionEpoch"] do
-      {:ok, dt, _} = DateTime.from_iso8601(data["lastConnectionEpoch"])
-      dt
-    else
-      nil
-    end
+    last_connection_at =
+      if data["lastConnectionEpoch"] do
+        {:ok, dt, _} = DateTime.from_iso8601(data["lastConnectionEpoch"])
+        dt
+      else
+        nil
+      end
 
     %CitraClient.Entities.Telescope{
       id: data["id"],
@@ -139,7 +142,8 @@ defmodule CitraClient do
   @doc """
   Creates one or more telescopes on the platform - returns a list of UUIDs of the created telescopes
   """
-  @spec create_telescopes([CitraClient.Entities.Telescope.t()]) :: {:ok, [String.t()]} | {:error, any()}
+  @spec create_telescopes([CitraClient.Entities.Telescope.t()]) ::
+          {:ok, [String.t()]} | {:error, any()}
   def create_telescopes(telescopes) do
     body = [
       Enum.map(telescopes, fn t ->
@@ -157,11 +161,12 @@ defmodule CitraClient do
       end)
     ]
 
-    resp = Req.post!(
-      @base_url <> "telescopes",
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
-      json: body
-    )
+    resp =
+      Req.post!(
+        @base_url <> "telescopes",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
 
     case resp.status do
       201 -> {:ok, resp.body}
@@ -172,7 +177,8 @@ defmodule CitraClient do
   @doc """
   Creates a new telescope on the platform - returns the UUID of the created telescope
   """
-  @spec create_telescope(CitraClient.Entities.Telescope.t()) :: {:ok, String.t()} | {:error, any()}
+  @spec create_telescope(CitraClient.Entities.Telescope.t()) ::
+          {:ok, String.t()} | {:error, any()}
   def create_telescope(telescope) do
     body = [
       %{
@@ -180,19 +186,20 @@ defmodule CitraClient do
         "groundStationId" => telescope.groundstation_id,
         "angularNoise" => telescope.angular_noise,
         "fieldOfView" => telescope.field_of_view,
-          "maxMagnitude" => telescope.max_magnitude,
-          "minElevation" => telescope.min_elevation,
-          "maxSlewRate" => telescope.max_slew_rate,
-          "homeAzimuth" => telescope.home_azimuth,
-          "homeElevation" => telescope.home_elevation
-        }
-      ]
+        "maxMagnitude" => telescope.max_magnitude,
+        "minElevation" => telescope.min_elevation,
+        "maxSlewRate" => telescope.max_slew_rate,
+        "homeAzimuth" => telescope.home_azimuth,
+        "homeElevation" => telescope.home_elevation
+      }
+    ]
 
-    resp = Req.post!(
-      @base_url <> "telescopes",
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
-      json: body
-    )
+    resp =
+      Req.post!(
+        @base_url <> "telescopes",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
 
     case resp.status do
       201 -> {:ok, Enum.at(resp.body, 0)}
@@ -209,11 +216,12 @@ defmodule CitraClient do
       "telescopeId" => task.telescope_id
     }
 
-    resp = Req.post!(
-      @base_url <> "tasks",
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
-      json: body
-    )
+    resp =
+      Req.post!(
+        @base_url <> "tasks",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
 
     case resp.status do
       201 -> {:ok, resp.body["id"]}
@@ -226,41 +234,50 @@ defmodule CitraClient do
   """
   @spec get_tasks(integer()) :: [CitraClient.Entities.Task.t()]
   def get_tasks(telescope_id, opts \\ []) do
-    task_start_after = Keyword.get(opts, :task_start_after, nil)
-    |> case do
-      nil -> nil
-      dt -> DateTime.to_iso8601(dt)
-    end
-    task_start_before = Keyword.get(opts, :task_start_before, nil)
-    |> case do
-      nil -> nil
-      dt -> DateTime.to_iso8601(dt)
-    end
-    task_stop_after = Keyword.get(opts, :task_stop_after, nil)
-    |> case do
-      nil -> nil
-      dt -> DateTime.to_iso8601(dt)
-    end
-    task_stop_before = Keyword.get(opts, :task_stop_before, nil)
-    |> case do
-      nil -> nil
-      dt -> DateTime.to_iso8601(dt)
-    end
+    task_start_after =
+      Keyword.get(opts, :task_start_after, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
 
-    params = %{
-      "taskStartAfter" => task_start_after,
-      "taskStartBefore" => task_start_before,
-      "taskStopAfter" => task_stop_after,
-      "taskStopBefore" => task_stop_before
-    }
-    |> Enum.filter(fn {_k, v} -> v != nil end)
-    |> Enum.into(%{})
+    task_start_before =
+      Keyword.get(opts, :task_start_before, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
 
-    resp = Req.get!(
-      @base_url <> "telescopes/#{telescope_id}/tasks",
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
-      params: params
-    )
+    task_stop_after =
+      Keyword.get(opts, :task_stop_after, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
+
+    task_stop_before =
+      Keyword.get(opts, :task_stop_before, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
+
+    params =
+      %{
+        "taskStartAfter" => task_start_after,
+        "taskStartBefore" => task_start_before,
+        "taskStopAfter" => task_stop_after,
+        "taskStopBefore" => task_stop_before
+      }
+      |> Enum.filter(fn {_k, v} -> v != nil end)
+      |> Enum.into(%{})
+
+    resp =
+      Req.get!(
+        @base_url <> "telescopes/#{telescope_id}/tasks",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
 
     case resp.status do
       200 ->
@@ -276,7 +293,9 @@ defmodule CitraClient do
             status: String.to_existing_atom(String.downcase(data["status"]))
           }
         end)
-      _ -> []
+
+      _ ->
+        []
     end
   end
 
@@ -289,11 +308,12 @@ defmodule CitraClient do
       "status" => CitraClient.Entities.TaskStatus.to_string(status)
     }
 
-    resp = Req.put!(
-      @base_url <> "tasks/#{task_id}",
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)},
-      json: body
-    )
+    resp =
+      Req.put!(
+        @base_url <> "tasks/#{task_id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
 
     case resp.status do
       200 -> :ok
@@ -304,33 +324,102 @@ defmodule CitraClient do
   @doc """
   Gets image upload parameters for a given telescope and image filename - returns AWS S3 upload parameters
   """
-  @spec get_image_upload_params(String.t(), String.t()) :: {:ok, CitraClient.Entities.ImageUploadParams.t()} | {:error, any()}
+  @spec get_image_upload_params(String.t(), String.t()) ::
+          {:ok, CitraClient.Entities.ImageUploadParams.t()} | {:error, any()}
   def get_image_upload_params(telescope_id, image_filename) do
     request_params = %{
       "telescope_id" => telescope_id,
       "filename" => image_filename
     }
 
-    resp = Req.post!(
-      @base_url <> "my/images?" <> URI.encode_query(request_params),
-      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
-    )
+    resp =
+      Req.post!(
+        @base_url <> "my/images?" <> URI.encode_query(request_params),
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
 
     case resp.status do
-      200 -> {:ok,
-        %CitraClient.Entities.ImageUploadParams{
-          aws_access_key_id: resp.body["fields"]["AWSAccessKeyId"],
-          content_type: resp.body["fields"]["Content-Type"],
-          key: resp.body["fields"]["key"],
-          policy: resp.body["fields"]["policy"],
-          signature: resp.body["fields"]["signature"],
-          filename: resp.body["filename"],
-          results_url: resp.body["resultsUrl"],
-          upload_url: resp.body["uploadUrl"],
-          upload_id: resp.body["uploadId"]
-        }
-      }
-      _ -> {:error, resp.body}
+      200 ->
+        {:ok,
+         %CitraClient.Entities.ImageUploadParams{
+           aws_access_key_id: resp.body["fields"]["AWSAccessKeyId"],
+           content_type: resp.body["fields"]["Content-Type"],
+           key: resp.body["fields"]["key"],
+           policy: resp.body["fields"]["policy"],
+           signature: resp.body["fields"]["signature"],
+           filename: resp.body["filename"],
+           results_url: resp.body["resultsUrl"],
+           upload_url: resp.body["uploadUrl"],
+           upload_id: resp.body["uploadId"]
+         }}
+
+      _ ->
+        {:error, resp.body}
     end
+  end
+
+  def upload_image_to_s3(telescope_id, file_path) do
+    # get image filename from file path
+    filename = Path.basename(file_path)
+
+    # Get the presigned upload parameters
+    {:ok, upload_params} = get_image_upload_params(telescope_id, filename)
+
+    IO.puts("Uploading file: #{filename}")
+    IO.puts("URL: #{upload_params.upload_url}")
+
+    # Read binary file content for upload
+    file_content = File.read!(file_path)
+
+    # AWS is picky about multipart uploads- build the multipart form data manually
+
+    # Create boundary for multipart form
+    boundary = "------------------------#{:crypto.strong_rand_bytes(8) |> Base.encode16()}"
+
+    # Create form data manually with binary-safe handling
+    body =
+      ""
+      |> append_part(boundary, "Content-Type", upload_params.content_type)
+      |> append_part(boundary, "x-amz-server-side-encryption", "AES256")
+      |> append_part(boundary, "key", upload_params.key)
+      |> append_part(boundary, "AWSAccessKeyId", upload_params.aws_access_key_id)
+      |> append_part(boundary, "policy", upload_params.policy)
+      |> append_part(boundary, "signature", upload_params.signature)
+      |> append_file(boundary, "file", filename, upload_params.content_type, file_content)
+      |> Kernel.<>("--#{boundary}--\r\n")
+
+    # Set Content-Type header with the boundary
+    headers = [
+      {"Content-Type", "multipart/form-data; boundary=#{boundary}"}
+    ]
+
+    resp =
+      Req.post!(
+        upload_params.upload_url,
+        headers: headers,
+        body: body
+      )
+
+    case resp.status do
+      status when status in [200, 204] ->
+        IO.puts("Upload successful!")
+        :ok
+
+      _ ->
+        IO.puts("Upload failed with status: #{resp.status}")
+        {:error, %{body: resp.body, status: resp.status, url: upload_params.upload_url}}
+    end
+  end
+
+  # Helper functions for multipart form construction
+  defp append_part(body, boundary, name, value) do
+    body <>
+      "--#{boundary}\r\nContent-Disposition: form-data; name=\"#{name}\"\r\n\r\n#{value}\r\n"
+  end
+
+  defp append_file(body, boundary, name, filename, content_type, data) do
+    body <>
+      "--#{boundary}\r\nContent-Disposition: form-data; name=\"#{name}\"; filename=\"#{filename}\"\r\nContent-Type: #{content_type}\r\n\r\n" <>
+      data <> "\r\n"
   end
 end
