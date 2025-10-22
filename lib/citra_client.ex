@@ -127,6 +127,15 @@ defmodule CitraClient do
     |> Enum.map(&map_telescope/1)
   end
 
+  @spec get_telescopes_by_groundstation(String.t()) :: [CitraClient.Entities.Telescope.t()]
+  def get_telescopes_by_groundstation(groundstation_id) do
+    Req.get!(
+      @base_url <> "ground-stations/#{groundstation_id}/telescopes",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    ).body
+    |> Enum.map(&map_telescope/1)
+  end
+
   defp map_telescope(data) do
     {:ok, created_at, _} = DateTime.from_iso8601(data["creationEpoch"])
 
