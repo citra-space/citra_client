@@ -6,6 +6,7 @@ defmodule CitraClient do
   @base_url "https://dev.api.citra.space/"
 
   alias CitraClient.Entities.Groundstation
+  require Logger
 
   def set_token(token) do
     Application.put_env(:citra_client, :api_token, token)
@@ -365,8 +366,8 @@ defmodule CitraClient do
     # Get the presigned upload parameters
     {:ok, upload_params} = get_image_upload_params(telescope_id, filename)
 
-    IO.puts("Uploading file: #{filename}")
-    IO.puts("URL: #{upload_params.upload_url}")
+    Logger.debug("Uploading file: #{filename}")
+    Logger.debug("URL: #{upload_params.upload_url}")
 
     # Read binary file content for upload
     file_content = File.read!(file_path)
@@ -402,11 +403,11 @@ defmodule CitraClient do
 
     case resp.status do
       status when status in [200, 204] ->
-        IO.puts("Upload successful!")
+        Logger.info("Uploaded image #{filename} successfully")
         :ok
 
       _ ->
-        IO.puts("Upload failed with status: #{resp.status}")
+        Logger.error("Upload failed for image #{filename} with status: #{resp.status}")
         {:error, %{body: resp.body, status: resp.status, url: upload_params.upload_url}}
     end
   end
