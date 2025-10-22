@@ -15,6 +15,7 @@ defmodule CitraClient do
   @doc """
   Fetches all groundstations on the platform
   """
+  @spec get_groundstations() :: [Groundstation.t()]
   def get_groundstations do
     Req.get!(
       @base_url <> "ground-stations",
@@ -23,6 +24,22 @@ defmodule CitraClient do
     |> Enum.map(&map_groundstation/1)
   end
 
+  @doc """
+  Gets all groundstations for the authenticated user
+  """
+  @spec get_my_groundstations() :: [Groundstation.t()]
+  def get_my_groundstations do
+    Req.get!(
+      @base_url <> "my/ground-stations",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    ).body["groundStations"]
+    |> Enum.map(&map_groundstation/1)
+  end
+
+  @doc """
+  Creates a new groundstation on the platform - returns the UUID of the created groundstation
+  """
+  @spec create_groundstation(any()) :: {:error, any()} | {:ok, String.t()}
   def create_groundstation(groundstation) do
     body = %{
       "latitude" => groundstation.latitude,
@@ -54,8 +71,6 @@ defmodule CitraClient do
       nil
     end
 
-    IO.inspect(data)
-
     %Groundstation{
       latitude: data["latitude"],
       longitude: data["longitude"],
@@ -68,6 +83,7 @@ defmodule CitraClient do
     }
   end
 
+  @spec get_telescopes([String.t()]) :: [CitraClient.Entities.Telescope.t()]
   def get_telescopes(ids) when is_list(ids) do
     Req.get!(
       @base_url <> "telescopes",
@@ -77,10 +93,12 @@ defmodule CitraClient do
     |> Enum.map(&map_telescope/1)
   end
 
+  @spec get_telescopes(String.t()) :: CitraClient.Entities.Telescope.t()
   def get_telescopes(id) do
     get_telescopes([id])
   end
 
+  @spec get_telescopes() :: [CitraClient.Entities.Telescope.t()]
   def get_telescopes() do
     Req.get!(
       @base_url <> "telescopes",
@@ -118,7 +136,9 @@ defmodule CitraClient do
     }
   end
 
-
+  @doc """
+  Creates one or more telescopes on the platform - returns a list of UUIDs of the created telescopes
+  """
   @spec create_telescopes([CitraClient.Entities.Telescope.t()]) :: {:ok, [String.t()]} | {:error, any()}
   def create_telescopes(telescopes) do
     body = [
@@ -149,6 +169,9 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Creates a new telescope on the platform - returns the UUID of the created telescope
+  """
   @spec create_telescope(CitraClient.Entities.Telescope.t()) :: {:ok, String.t()} | {:error, any()}
   def create_telescope(telescope) do
     body = [
@@ -198,6 +221,9 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Fetches tasks for a given telescope, with optional filtering by start and stop times
+  """
   @spec get_tasks(integer()) :: [CitraClient.Entities.Task.t()]
   def get_tasks(telescope_id, opts \\ []) do
     task_start_after = Keyword.get(opts, :task_start_after, nil)
@@ -254,6 +280,9 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Updates the status of a given task
+  """
   @spec update_task(String.t(), CitraClient.Entities.TaskStatus.t()) :: :ok | {:error, any()}
   def update_task(task_id, status) do
     body = %{
@@ -272,6 +301,9 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Gets image upload parameters for a given telescope and image filename - returns AWS S3 upload parameters
+  """
   @spec get_image_upload_params(String.t(), String.t()) :: {:ok, CitraClient.Entities.ImageUploadParams.t()} | {:error, any()}
   def get_image_upload_params(telescope_id, image_filename) do
     request_params = %{
