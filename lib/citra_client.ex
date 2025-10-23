@@ -172,7 +172,7 @@ defmodule CitraClient do
     %CitraClient.Entities.Telescope{
       id: data["id"],
       user_id: data["userId"],
-      groundstation_id: data["groundstationId"],
+      groundstation_id: data["groundStationId"],
       satellite_id: data["satelliteId"],
       creation_epoch: created_at,
       last_connection_epoch: last_connection_at,
@@ -220,6 +220,47 @@ defmodule CitraClient do
       201 -> {:ok, resp.body}
       _ -> {:error, resp.body}
     end
+  end
+
+  @doc """
+  Updates one or more telescopes on the platform - returns :ok on success
+  """
+  @spec update_telescopes([CitraClient.Entities.Telescope.t()]) :: :ok | {:error, any()}
+  def update_telescopes(telescopes) do
+    body = Enum.map(telescopes, fn t ->
+      %{
+        "id" => t.id,
+        "name" => t.name,
+        "groundStationId" => t.groundstation_id,
+        "angularNoise" => t.angular_noise,
+        "fieldOfView" => t.field_of_view,
+        "maxMagnitude" => t.max_magnitude,
+        "minElevation" => t.min_elevation,
+        "maxSlewRate" => t.max_slew_rate,
+        "homeAzimuth" => t.home_azimuth,
+        "homeElevation" => t.home_elevation
+      }
+    end)
+
+    resp =
+      Req.put!(
+        @base_url <> "telescopes",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
+
+    case resp.status do
+      200 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Updates a single telescope on the platform - returns :ok on success
+  """
+  @spec update_telescope(CitraClient.Entities.Telescope.t()) :: :ok | {:error, any()}
+  def update_telescope(telescope) do
+    update_telescopes([telescope])
   end
 
   @doc """
