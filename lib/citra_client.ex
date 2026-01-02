@@ -1,12 +1,54 @@
 defmodule CitraClient do
   @moduledoc """
   API client for the Citra Space platform.
+
+  ## Configuration
+
+  Configure the environment in your `config.exs`:
+
+      config :citra_client, :env, :dev   # or :prod
+
+  Or set it at runtime:
+
+      CitraClient.set_env(:prod)
+
+  Available environments:
+  - `:dev` - Uses `https://dev.api.citra.space/` (default)
+  - `:prod` - Uses `https://api.citra.space/`
   """
 
-  @base_url "https://dev.api.citra.space/"
+  @dev_url "https://dev.api.citra.space/"
+  @prod_url "https://api.citra.space/"
 
   alias CitraClient.Entities.Groundstation
   require Logger
+
+  @doc """
+  Sets the API environment to `:dev` or `:prod`.
+  """
+  @spec set_env(:dev | :prod) :: :ok
+  def set_env(env) when env in [:dev, :prod] do
+    Application.put_env(:citra_client, :env, env)
+  end
+
+  @doc """
+  Gets the current API environment. Defaults to `:dev`.
+  """
+  @spec get_env() :: :dev | :prod
+  def get_env do
+    Application.get_env(:citra_client, :env, :dev)
+  end
+
+  @doc """
+  Returns the base URL for the current environment.
+  """
+  @spec base_url() :: String.t()
+  def base_url do
+    case get_env() do
+      :prod -> @prod_url
+      _ -> @dev_url
+    end
+  end
 
   def set_token(token) do
     Application.put_env(:citra_client, :api_token, token)
@@ -19,7 +61,7 @@ defmodule CitraClient do
   @spec get_groundstations() :: [Groundstation.t()]
   def get_groundstations do
     Req.get!(
-      @base_url <> "ground-stations",
+      base_url() <> "ground-stations",
       auth: {:bearer, Application.get_env(:citra_client, :api_token)}
     ).body["groundStations"]
     |> Enum.map(&map_groundstation/1)
@@ -31,7 +73,7 @@ defmodule CitraClient do
   @spec get_my_groundstations() :: [Groundstation.t()]
   def get_my_groundstations do
     Req.get!(
-      @base_url <> "my/ground-stations",
+      base_url() <> "my/ground-stations",
       auth: {:bearer, Application.get_env(:citra_client, :api_token)}
     ).body["groundStations"]
     |> Enum.map(&map_groundstation/1)
@@ -44,7 +86,7 @@ defmodule CitraClient do
   def get_groundstation(id) do
     resp =
       Req.get!(
-        @base_url <> "ground-stations/#{id}",
+        base_url() <> "ground-stations/#{id}",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)}
       )
 
@@ -68,7 +110,7 @@ defmodule CitraClient do
 
     resp =
       Req.post!(
-        @base_url <> "ground-stations",
+        base_url() <> "ground-stations",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -89,7 +131,7 @@ defmodule CitraClient do
 
     resp =
       Req.put!(
-        @base_url <> "ground-stations/#{groundstation.id}",
+        base_url() <> "ground-stations/#{groundstation.id}",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -127,7 +169,7 @@ defmodule CitraClient do
   @spec get_telescopes([String.t()]) :: [CitraClient.Entities.Telescope.t()]
   def get_telescopes(ids) when is_list(ids) do
     Req.get!(
-      @base_url <> "telescopes",
+      base_url() <> "telescopes",
       auth: {:bearer, Application.get_env(:citra_client, :api_token)},
       params: %{ids: Enum.join(ids, ",")}
     ).body
@@ -142,7 +184,7 @@ defmodule CitraClient do
   @spec get_telescopes() :: [CitraClient.Entities.Telescope.t()]
   def get_telescopes() do
     Req.get!(
-      @base_url <> "telescopes",
+      base_url() <> "telescopes",
       auth: {:bearer, Application.get_env(:citra_client, :api_token)}
     ).body
     |> Enum.map(&map_telescope/1)
@@ -151,7 +193,7 @@ defmodule CitraClient do
   @spec get_telescopes_by_groundstation(String.t()) :: [CitraClient.Entities.Telescope.t()]
   def get_telescopes_by_groundstation(groundstation_id) do
     Req.get!(
-      @base_url <> "ground-stations/#{groundstation_id}/telescopes",
+      base_url() <> "ground-stations/#{groundstation_id}/telescopes",
       auth: {:bearer, Application.get_env(:citra_client, :api_token)}
     ).body
     |> Enum.map(&map_telescope/1)
@@ -211,7 +253,7 @@ defmodule CitraClient do
 
     resp =
       Req.post!(
-        @base_url <> "telescopes",
+        base_url() <> "telescopes",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -244,7 +286,7 @@ defmodule CitraClient do
 
     resp =
       Req.put!(
-        @base_url <> "telescopes",
+        base_url() <> "telescopes",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -285,7 +327,7 @@ defmodule CitraClient do
 
     resp =
       Req.post!(
-        @base_url <> "telescopes",
+        base_url() <> "telescopes",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -307,7 +349,7 @@ defmodule CitraClient do
 
     resp =
       Req.post!(
-        @base_url <> "tasks",
+        base_url() <> "tasks",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -363,7 +405,7 @@ defmodule CitraClient do
 
     resp =
       Req.get!(
-        @base_url <> "telescopes/#{telescope_id}/tasks",
+        base_url() <> "telescopes/#{telescope_id}/tasks",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         params: params
       )
@@ -400,7 +442,7 @@ defmodule CitraClient do
 
     resp =
       Req.put!(
-        @base_url <> "tasks/#{task_id}",
+        base_url() <> "tasks/#{task_id}",
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: body
       )
@@ -424,7 +466,7 @@ defmodule CitraClient do
 
     resp =
       Req.post!(
-        @base_url <> "my/images?" <> URI.encode_query(request_params),
+        base_url() <> "my/images?" <> URI.encode_query(request_params),
         auth: {:bearer, Application.get_env(:citra_client, :api_token)}
       )
 
