@@ -21,6 +21,11 @@ defmodule CitraClient do
   @prod_url "https://api.citra.space/"
 
   alias CitraClient.Entities.Groundstation
+  alias CitraClient.Entities.Telescope
+  alias CitraClient.Entities.Task
+  alias CitraClient.Entities.ImageUploadParams
+  alias CitraClient.Entities.TaskStatus
+  alias CitraClient.Entities.Antenna
   require Logger
 
   @doc """
@@ -166,7 +171,7 @@ defmodule CitraClient do
     }
   end
 
-  @spec get_telescopes([String.t()]) :: [CitraClient.Entities.Telescope.t()]
+  @spec get_telescopes([String.t()]) :: [Telescope.t()]
   def get_telescopes(ids) when is_list(ids) do
     Req.get!(
       base_url() <> "telescopes",
@@ -176,12 +181,12 @@ defmodule CitraClient do
     |> Enum.map(&map_telescope/1)
   end
 
-  @spec get_telescopes(String.t()) :: CitraClient.Entities.Telescope.t()
+  @spec get_telescopes(String.t()) :: Telescope.t()
   def get_telescopes(id) do
     get_telescopes([id])
   end
 
-  @spec get_telescopes() :: [CitraClient.Entities.Telescope.t()]
+  @spec get_telescopes() :: [Telescope.t()]
   def get_telescopes() do
     Req.get!(
       base_url() <> "telescopes",
@@ -190,7 +195,7 @@ defmodule CitraClient do
     |> Enum.map(&map_telescope/1)
   end
 
-  @spec get_telescopes_by_groundstation(String.t()) :: [CitraClient.Entities.Telescope.t()]
+  @spec get_telescopes_by_groundstation(String.t()) :: [Telescope.t()]
   def get_telescopes_by_groundstation(groundstation_id) do
     Req.get!(
       base_url() <> "ground-stations/#{groundstation_id}/telescopes",
@@ -211,7 +216,7 @@ defmodule CitraClient do
         nil
       end
 
-    %CitraClient.Entities.Telescope{
+    %Telescope{
       id: data["id"],
       user_id: data["userId"],
       groundstation_id: data["groundStationId"],
@@ -267,7 +272,7 @@ defmodule CitraClient do
   @doc """
   Updates one or more telescopes on the platform - returns :ok on success
   """
-  @spec update_telescopes([CitraClient.Entities.Telescope.t()]) :: :ok | {:error, any()}
+  @spec update_telescopes([Telescope.t()]) :: :ok | {:error, any()}
   def update_telescopes(telescopes) do
     body = Enum.map(telescopes, fn t ->
       %{
@@ -300,7 +305,7 @@ defmodule CitraClient do
   @doc """
   Updates a single telescope on the platform - returns :ok on success
   """
-  @spec update_telescope(CitraClient.Entities.Telescope.t()) :: :ok | {:error, any()}
+  @spec update_telescope(Telescope.t()) :: :ok | {:error, any()}
   def update_telescope(telescope) do
     update_telescopes([telescope])
   end
@@ -308,7 +313,7 @@ defmodule CitraClient do
   @doc """
   Creates a new telescope on the platform - returns the UUID of the created telescope
   """
-  @spec create_telescope(CitraClient.Entities.Telescope.t()) ::
+  @spec create_telescope(Telescope.t()) ::
           {:ok, String.t()} | {:error, any()}
   def create_telescope(telescope) do
     body = [
@@ -338,7 +343,75 @@ defmodule CitraClient do
     end
   end
 
-  @spec create_task(CitraClient.Entities.Task.t()) :: {:ok, String.t()} | {:error, any()}
+  @spec create_antenna(Antenna.t()) ::
+          {:ok, String.t()} | {:error, any()}
+  def create_antenna(antenna) do
+    body = %{
+      "name" => antenna.name,
+      "groundStationId" => antenna.ground_station_id,
+      "satelliteId" => antenna.satellite_id,
+      "minFrequency" => antenna.min_frequency,
+      "maxFrequency" => antenna.max_frequency,
+      "minElevation" => antenna.min_elevation,
+      "maxSlewRate" => antenna.max_slew_rate,
+      "homeAzimuth" => antenna.home_azimuth,
+      "homeElevation" => antenna.home_elevation,
+      "halfPowerBeamWidth" => antenna.half_power_beam_width
+    }
+    resp =
+      Req.post!(
+        base_url() <> "antennas",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: [body]
+      )
+    case resp.status do
+      201 -> {:ok, resp.body["id"]}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  defp map_antenna(data) do
+    {:ok, creation_epoch, _} = DateTime.from_iso8601(data["creationEpoch"])
+
+    last_connection_epoch =
+      if data["lastConnectionEpoch"] do
+        {:ok, dt, _} = DateTime.from_iso8601(data["lastConnectionEpoch"])
+        dt
+      else
+        nil
+      end
+
+    %Antenna{
+      id: data["id"],
+      user_id: data["userId"],
+      ground_station_id: data["groundStationId"],
+      satellite_id: data["satelliteId"],
+      user_group_id: data["userGroupId"],
+      creation_epoch: creation_epoch,
+      username: data["username"],
+      last_connection_epoch: last_connection_epoch,
+      name: data["name"],
+      min_frequency: data["minFrequency"],
+      max_frequency: data["maxFrequency"],
+      min_elevation: data["minElevation"],
+      max_slew_rate: data["maxSlewRate"],
+      home_azimuth: data["homeAzimuth"],
+      home_elevation: data["homeElevation"],
+      half_power_beam_width: data["halfPowerBeamWidth"],
+      status: data["status"]
+    }
+  end
+
+  @spec get_antennas() :: [Antenna.t()]
+  def get_antennas() do
+    Req.get!(
+      base_url() <> "antennas",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    ).body
+    |> Enum.map(&map_antenna/1)
+  end
+
+  @spec create_task(Task.t()) :: {:ok, String.t()} | {:error, any()}
   def create_task(task) do
     body = %{
       "taskStart" => DateTime.to_iso8601(task.task_start),
@@ -363,7 +436,7 @@ defmodule CitraClient do
   @doc """
   Fetches tasks for a given telescope, with optional filtering by start and stop times
   """
-  @spec get_tasks(integer()) :: [CitraClient.Entities.Task.t()]
+  @spec get_tasks(integer()) :: [Task.t()]
   def get_tasks(telescope_id, opts \\ []) do
     task_start_after =
       Keyword.get(opts, :task_start_after, nil)
@@ -416,7 +489,7 @@ defmodule CitraClient do
           {:ok, task_start, _} = DateTime.from_iso8601(data["taskStart"])
           {:ok, task_end, _} = DateTime.from_iso8601(data["taskStop"])
 
-          %CitraClient.Entities.Task{
+          %Task{
             id: data["id"],
             task_start: task_start,
             task_end: task_end,
@@ -434,10 +507,10 @@ defmodule CitraClient do
   @doc """
   Updates the status of a given task
   """
-  @spec update_task(String.t(), CitraClient.Entities.TaskStatus.t()) :: :ok | {:error, any()}
+  @spec update_task(String.t(), TaskStatus.t()) :: :ok | {:error, any()}
   def update_task(task_id, status) do
     body = %{
-      "status" => CitraClient.Entities.TaskStatus.to_string(status)
+      "status" => TaskStatus.to_string(status)
     }
 
     resp =
@@ -457,7 +530,7 @@ defmodule CitraClient do
   Gets image upload parameters for a given telescope and image filename - returns AWS S3 upload parameters
   """
   @spec get_image_upload_params(String.t(), String.t()) ::
-          {:ok, CitraClient.Entities.ImageUploadParams.t()} | {:error, any()}
+          {:ok, ImageUploadParams.t()} | {:error, any()}
   def get_image_upload_params(telescope_id, image_filename) do
     request_params = %{
       "telescope_id" => telescope_id,
@@ -473,7 +546,7 @@ defmodule CitraClient do
     case resp.status do
       200 ->
         {:ok,
-         %CitraClient.Entities.ImageUploadParams{
+         %ImageUploadParams{
            aws_access_key_id: resp.body["fields"]["AWSAccessKeyId"],
            content_type: resp.body["fields"]["Content-Type"],
            key: resp.body["fields"]["key"],
@@ -558,5 +631,41 @@ defmodule CitraClient do
     body <>
       "--#{boundary}\r\nContent-Disposition: form-data; name=\"#{name}\"; filename=\"#{filename}\"\r\nContent-Type: #{content_type}\r\n\r\n" <>
       data <> "\r\n"
+  end
+
+  @spec upload_rf_capture(String.t(), CitraClient.Entities.RfCapture.t()) :: :ok | {:error, any()}
+  def upload_rf_capture(antenna_id, rf_capture) do
+    body = %{
+      "antennaId" => antenna_id,
+      "taskId" => rf_capture.task_id,
+      "captureStart" => DateTime.to_iso8601(rf_capture.capture_start),
+      "captureEnd" => DateTime.to_iso8601(rf_capture.capture_end),
+      "data" => %{
+        "detections" => Enum.map(rf_capture.data.detections, fn detection ->
+          %{
+            "centerFrequencyHz" => detection.center_frequency_hz,
+            "bandwidthHz" => detection.bandwidth_hz,
+            "strengthDbm" => detection.strength_dbm,
+            "snrDb" => detection.snr_db
+          }
+        end),
+        "powerSpectralDensity" => %{
+          "frequencyHz" => rf_capture.data.power_spectral_density.frequency_hz,
+          "powerDbmPerHz" => rf_capture.data.power_spectral_density.power_dbm_per_hz
+        }
+      }
+    }
+
+    resp =
+      Req.post!(
+        base_url() <> "rf-captures",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: body
+      )
+
+    case resp.status do
+      201 -> :ok
+      _ -> {:error, resp.body}
+    end
   end
 end

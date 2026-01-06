@@ -4,7 +4,7 @@ defmodule CitraClient.MixProject do
   def project do
     [
       app: :citra_client,
-      version: "0.1.7",
+      version: "0.1.9",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       description: "Elixir client for the Citra Space API",
