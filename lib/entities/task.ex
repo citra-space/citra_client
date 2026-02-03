@@ -5,6 +5,7 @@ defmodule CitraClient.Entities.Task do
     :task_end,
     :satellite_id,
     :telescope_id,
+    :antenna_id,
     :status
   ]
 
@@ -13,7 +14,8 @@ defmodule CitraClient.Entities.Task do
           task_start: DateTime.t(),
           task_end: DateTime.t(),
           satellite_id: integer(),
-          telescope_id: integer(),
+          telescope_id: String.t() | nil,
+          antenna_id: String.t() | nil,
           status: CitraClient.Entities.TaskStatus.t()
         }
 end

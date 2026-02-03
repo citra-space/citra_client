@@ -26,6 +26,7 @@ defmodule CitraClient do
   alias CitraClient.Entities.ImageUploadParams
   alias CitraClient.Entities.TaskStatus
   alias CitraClient.Entities.Antenna
+  alias CitraClient.Entities.Satellite
   require Logger
 
   @doc """
@@ -147,6 +148,23 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Deletes a groundstation by ID
+  """
+  @spec delete_groundstation(String.t()) :: :ok | {:error, any()}
+  def delete_groundstation(id) do
+    resp =
+      Req.delete!(
+        base_url() <> "ground-stations/#{id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      204 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
   defp map_groundstation(data) do
     {:ok, created_at, _} = DateTime.from_iso8601(data["creationEpoch"])
 
@@ -240,7 +258,7 @@ defmodule CitraClient do
   @spec create_telescopes([CitraClient.Entities.Telescope.t()]) ::
           {:ok, [String.t()]} | {:error, any()}
   def create_telescopes(telescopes) do
-    body = [
+    body =
       Enum.map(telescopes, fn t ->
         %{
           "name" => t.name,
@@ -254,7 +272,6 @@ defmodule CitraClient do
           "homeElevation" => t.home_elevation
         }
       end)
-    ]
 
     resp =
       Req.post!(
@@ -343,6 +360,70 @@ defmodule CitraClient do
     end
   end
 
+  @doc """
+  Deletes one or more telescopes by ID
+  """
+  @spec delete_telescopes([String.t()]) :: :ok | {:error, any()}
+  def delete_telescopes(ids) when is_list(ids) do
+    resp =
+      Req.delete!(
+        base_url() <> "telescopes",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: ids
+      )
+
+    case resp.status do
+      200 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Deletes a single telescope by ID
+  """
+  @spec delete_telescope(String.t()) :: :ok | {:error, any()}
+  def delete_telescope(id) do
+    delete_telescopes([id])
+  end
+
+  @doc """
+  Gets all telescopes for the authenticated user
+  """
+  @spec get_my_telescopes() :: [Telescope.t()]
+  def get_my_telescopes() do
+    Req.get!(
+      base_url() <> "my/telescopes",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    ).body
+    |> Enum.map(&map_telescope/1)
+  end
+
+  @doc """
+  Gets images for a specific telescope
+  """
+  @spec get_telescope_images(String.t(), keyword()) :: [map()]
+  def get_telescope_images(telescope_id, opts \\ []) do
+    params =
+      %{
+        "limit" => Keyword.get(opts, :limit),
+        "offset" => Keyword.get(opts, :offset)
+      }
+      |> Enum.filter(fn {_k, v} -> v != nil end)
+      |> Enum.into(%{})
+
+    resp =
+      Req.get!(
+        base_url() <> "telescopes/#{telescope_id}/images",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
   @spec create_antenna(Antenna.t()) ::
           {:ok, String.t()} | {:error, any()}
   def create_antenna(antenna) do
@@ -364,9 +445,14 @@ defmodule CitraClient do
         auth: {:bearer, Application.get_env(:citra_client, :api_token)},
         json: [body]
       )
+
     case resp.status do
-      201 -> {:ok, resp.body["id"]}
-      _ -> {:error, resp.body}
+      201 ->
+        # Response is a list of IDs since we send a list
+        {:ok, Enum.at(resp.body, 0)}
+
+      _ ->
+        {:error, resp.body}
     end
   end
 
@@ -409,6 +495,93 @@ defmodule CitraClient do
       auth: {:bearer, Application.get_env(:citra_client, :api_token)}
     ).body
     |> Enum.map(&map_antenna/1)
+  end
+
+  @doc """
+  Gets all antennas for the authenticated user
+  """
+  @spec get_my_antennas() :: [Antenna.t()]
+  def get_my_antennas() do
+    Req.get!(
+      base_url() <> "my/antennas",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    ).body
+    |> Enum.map(&map_antenna/1)
+  end
+
+  @doc """
+  Gets a specific antenna by ID
+  """
+  @spec get_antenna(String.t()) :: {:ok, Antenna.t()} | {:error, any()}
+  def get_antenna(id) do
+    resp =
+      Req.get!(
+        base_url() <> "antennas/#{id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> {:ok, map_antenna(resp.body)}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Deletes one or more antennas by ID
+  """
+  @spec delete_antennas([String.t()]) :: :ok | {:error, any()}
+  def delete_antennas(ids) when is_list(ids) do
+    resp =
+      Req.delete!(
+        base_url() <> "antennas",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        json: ids
+      )
+
+    case resp.status do
+      200 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Deletes a single antenna by ID
+  """
+  @spec delete_antenna(String.t()) :: :ok | {:error, any()}
+  def delete_antenna(id) do
+    delete_antennas([id])
+  end
+
+  @doc """
+  Gets antennas for a specific groundstation
+  """
+  @spec get_antennas_by_groundstation(String.t()) :: [Antenna.t()]
+  def get_antennas_by_groundstation(groundstation_id) do
+    Req.get!(
+      base_url() <> "ground-stations/#{groundstation_id}/antennas",
+      auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+    ).body
+    |> Enum.map(&map_antenna/1)
+  end
+
+  @doc """
+  Gets tasks for a specific antenna with optional filtering
+  """
+  @spec get_antenna_tasks(String.t(), keyword()) :: [Task.t()]
+  def get_antenna_tasks(antenna_id, opts \\ []) do
+    params = build_task_filter_params(opts)
+
+    resp =
+      Req.get!(
+        base_url() <> "antennas/#{antenna_id}/tasks",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
+
+    case resp.status do
+      200 -> Enum.map(resp.body, &map_task/1)
+      _ -> []
+    end
   end
 
   @spec create_task(Task.t()) :: {:ok, String.t()} | {:error, any()}
@@ -665,6 +838,390 @@ defmodule CitraClient do
 
     case resp.status do
       201 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
+  # Helper function to build task filter params from keyword list
+  defp build_task_filter_params(opts) do
+    task_start_after =
+      Keyword.get(opts, :task_start_after, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
+
+    task_start_before =
+      Keyword.get(opts, :task_start_before, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
+
+    task_stop_after =
+      Keyword.get(opts, :task_stop_after, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
+
+    task_stop_before =
+      Keyword.get(opts, :task_stop_before, nil)
+      |> case do
+        nil -> nil
+        dt -> DateTime.to_iso8601(dt)
+      end
+
+    %{
+      "taskStartAfter" => task_start_after,
+      "taskStartBefore" => task_start_before,
+      "taskStopAfter" => task_stop_after,
+      "taskStopBefore" => task_stop_before
+    }
+    |> Enum.filter(fn {_k, v} -> v != nil end)
+    |> Enum.into(%{})
+  end
+
+  # Helper function to map task data to Task struct
+  defp map_task(data) do
+    {:ok, task_start, _} = DateTime.from_iso8601(data["taskStart"])
+    {:ok, task_end, _} = DateTime.from_iso8601(data["taskStop"])
+
+    %Task{
+      id: data["id"],
+      task_start: task_start,
+      task_end: task_end,
+      satellite_id: data["satelliteId"],
+      telescope_id: data["telescopeId"],
+      antenna_id: data["antennaId"],
+      status: String.to_existing_atom(String.downcase(data["status"]))
+    }
+  end
+
+  # ============================================================================
+  # Satellite Functions
+  # ============================================================================
+
+  @doc """
+  Gets paginated list of satellites with optional filtering
+  """
+  @spec get_satellites(keyword()) :: {:ok, map()} | {:error, any()}
+  def get_satellites(opts \\ []) do
+    params =
+      %{
+        "page" => Keyword.get(opts, :page),
+        "pageSize" => Keyword.get(opts, :page_size),
+        "sort" => Keyword.get(opts, :sort),
+        "filters" => Keyword.get(opts, :filters),
+        "quickFilter" => Keyword.get(opts, :quick_filter),
+        "showDecayed" => Keyword.get(opts, :show_decayed)
+      }
+      |> Enum.filter(fn {_k, v} -> v != nil end)
+      |> Enum.into(%{})
+
+    resp =
+      Req.get!(
+        base_url() <> "satellites",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
+
+    case resp.status do
+      200 -> {:ok, resp.body}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Gets a specific satellite by ID
+  """
+  @spec get_satellite(String.t()) :: {:ok, Satellite.t()} | {:error, any()}
+  def get_satellite(id) do
+    resp =
+      Req.get!(
+        base_url() <> "satellites/#{id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> {:ok, map_satellite(resp.body)}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Gets tasks for a specific satellite
+  """
+  @spec get_satellite_tasks(String.t(), keyword()) :: [Task.t()]
+  def get_satellite_tasks(satellite_id, opts \\ []) do
+    params = build_task_filter_params(opts)
+
+    resp =
+      Req.get!(
+        base_url() <> "satellites/#{satellite_id}/tasks",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
+
+    case resp.status do
+      200 -> Enum.map(resp.body, &map_task/1)
+      _ -> []
+    end
+  end
+
+  @doc """
+  Gets images for a specific satellite
+  """
+  @spec get_satellite_images(String.t(), keyword()) :: [map()]
+  def get_satellite_images(satellite_id, opts \\ []) do
+    params =
+      %{
+        "limit" => Keyword.get(opts, :limit),
+        "offset" => Keyword.get(opts, :offset)
+      }
+      |> Enum.filter(fn {_k, v} -> v != nil end)
+      |> Enum.into(%{})
+
+    resp =
+      Req.get!(
+        base_url() <> "satellites/#{satellite_id}/images",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
+  @doc """
+  Gets satellite overview statistics
+  """
+  @spec get_satellites_overview() :: {:ok, map()} | {:error, any()}
+  def get_satellites_overview() do
+    resp =
+      Req.get!(
+        base_url() <> "satellites/overview",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> {:ok, resp.body}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  defp map_satellite(data) do
+    launch_date =
+      if data["launchDate"] do
+        case Date.from_iso8601(data["launchDate"]) do
+          {:ok, date} -> date
+          _ -> nil
+        end
+      else
+        nil
+      end
+
+    decay_date =
+      if data["decayDate"] do
+        case Date.from_iso8601(data["decayDate"]) do
+          {:ok, date} -> date
+          _ -> nil
+        end
+      else
+        nil
+      end
+
+    %Satellite{
+      id: data["id"],
+      name: data["name"],
+      norad_id: data["noradId"],
+      cospar_id: data["cosparId"],
+      object_type: data["objectType"],
+      country: data["country"],
+      launch_date: launch_date,
+      decay_date: decay_date,
+      period: data["period"],
+      inclination: data["inclination"],
+      apogee: data["apogee"],
+      perigee: data["perigee"],
+      rcs: data["rcs"],
+      data_status: data["dataStatus"],
+      orbit_center: data["orbitCenter"],
+      orbit_type: data["orbitType"]
+    }
+  end
+
+  # ============================================================================
+  # Image Management Functions
+  # ============================================================================
+
+  @doc """
+  Gets all images for the authenticated user
+  """
+  @spec get_my_images() :: [map()]
+  def get_my_images() do
+    resp =
+      Req.get!(
+        base_url() <> "my/images",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
+  @doc """
+  Gets a specific image upload by ID
+  """
+  @spec get_image(String.t()) :: {:ok, map()} | {:error, any()}
+  def get_image(upload_id) do
+    resp =
+      Req.get!(
+        base_url() <> "my/images/#{upload_id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> {:ok, resp.body}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Deletes an image upload by ID
+  """
+  @spec delete_image(String.t()) :: :ok | {:error, any()}
+  def delete_image(upload_id) do
+    resp =
+      Req.delete!(
+        base_url() <> "my/images/#{upload_id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      204 -> :ok
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Gets images for a specific task
+  """
+  @spec get_task_images(String.t()) :: [map()]
+  def get_task_images(task_id) do
+    resp =
+      Req.get!(
+        base_url() <> "tasks/#{task_id}/images",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
+  # ============================================================================
+  # RF Capture Functions
+  # ============================================================================
+
+  @doc """
+  Gets a specific RF capture by ID
+  """
+  @spec get_rf_capture(String.t()) :: {:ok, map()} | {:error, any()}
+  def get_rf_capture(capture_id) do
+    resp =
+      Req.get!(
+        base_url() <> "rf-captures/#{capture_id}",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> {:ok, resp.body}
+      _ -> {:error, resp.body}
+    end
+  end
+
+  @doc """
+  Gets RF captures for a specific antenna
+  """
+  @spec get_antenna_rf_captures(String.t()) :: [map()]
+  def get_antenna_rf_captures(antenna_id) do
+    resp =
+      Req.get!(
+        base_url() <> "antennas/#{antenna_id}/rf-captures",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
+  @doc """
+  Gets RF captures for a specific task
+  """
+  @spec get_task_rf_captures(String.t()) :: [map()]
+  def get_task_rf_captures(task_id) do
+    resp =
+      Req.get!(
+        base_url() <> "tasks/#{task_id}/rf-captures",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
+  @doc """
+  Gets RF captures for a specific satellite
+  """
+  @spec get_satellite_rf_captures(String.t()) :: [map()]
+  def get_satellite_rf_captures(satellite_id) do
+    resp =
+      Req.get!(
+        base_url() <> "satellites/#{satellite_id}/rf-captures",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)}
+      )
+
+    case resp.status do
+      200 -> resp.body
+      _ -> []
+    end
+  end
+
+  # ============================================================================
+  # Weather Functions
+  # ============================================================================
+
+  @doc """
+  Gets weather data for a specific location
+  """
+  @spec get_weather(float(), float(), keyword()) :: {:ok, map()} | {:error, any()}
+  def get_weather(lat, lon, opts \\ []) do
+    params =
+      %{
+        "lat" => lat,
+        "lon" => lon,
+        "units" => Keyword.get(opts, :units, "imperial")
+      }
+
+    resp =
+      Req.get!(
+        base_url() <> "weather",
+        auth: {:bearer, Application.get_env(:citra_client, :api_token)},
+        params: params
+      )
+
+    case resp.status do
+      200 -> {:ok, resp.body}
       _ -> {:error, resp.body}
     end
   end

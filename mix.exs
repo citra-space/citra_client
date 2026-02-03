@@ -4,14 +4,14 @@ defmodule CitraClient.MixProject do
   def project do
     [
       app: :citra_client,
-      version: "0.1.9",
+      version: "0.2.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       description: "Elixir client for the Citra Space API",
       package: package(),
       deps: deps(),
-      source_url: "https://github.com/jmcguigs/citra_client",
-      homepage_url: "https://github.com/jmcguigs/citra_client",
+      source_url: "https://github.com/citra-space/citra_client",
+      homepage_url: "https://github.com/citra-space/citra_client",
       docs: [
         main: "CitraClient",
         extras: ["README.md"]
