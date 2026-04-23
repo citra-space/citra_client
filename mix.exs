@@ -4,7 +4,7 @@ defmodule CitraClient.MixProject do
   def project do
     [
       app: :citra_client,
-      version: "0.2.0",
+      version: "0.3.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       description: "Elixir client for the Citra Space API",
@@ -12,10 +12,7 @@ defmodule CitraClient.MixProject do
       deps: deps(),
       source_url: "https://github.com/citra-space/citra_client",
       homepage_url: "https://github.com/citra-space/citra_client",
-      docs: [
-        main: "CitraClient",
-        extras: ["README.md"]
-      ]
+      docs: docs()
     ]
   end
 
@@ -38,8 +35,23 @@ defmodule CitraClient.MixProject do
     [
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/citra-space/citra_client"},
-      files: ~w(lib .formatter.exs mix.exs README.md LICENSE),
+      files: ~w(lib priv .formatter.exs mix.exs README.md LICENSE),
       maintainers: ["jmcguigs"]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md": [title: "Overview"]],
+      api_reference: true,
+      source_ref: "v0.3.0",
+      groups_for_modules: [
+        "Operations": [~r/^CitraClient\.(?!Schemas|Generated|Generator|HTTP|OpenAPI)[A-Z]/],
+        "Schemas": [~r/^CitraClient\.Schemas\./],
+        "Internal": [CitraClient.Generated]
+      ],
+      nest_modules_by_prefix: [CitraClient.Schemas]
     ]
   end
 end
